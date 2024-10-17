@@ -4,10 +4,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from webdriver_manager.chrome import ChromeDriverManager 
+from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
-from webdriver_manager.opera import OperaDriverManager 
+from webdriver_manager.opera import OperaDriverManager
 from webdriver_manager.microsoft import IEDriverManager, EdgeChromiumDriverManager
+from selenium.webdriver.firefox.service import Service as GeckoService
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+import os
 
 def get_driver(browser):
     """Get the webdriver specified in configuration"""
@@ -24,7 +28,20 @@ def get_driver(browser):
         return webdriver.Chrome(ChromeDriverManager().install())
 
     elif browser.lower() in firefox:
-        return webdriver.Firefox(executable_path=GeckoDriverManager().install())
+        options = FirefoxOptions()
+        
+        # Automatically detect Firefox binary location
+        if os.path.exists('/usr/bin/firefox'):
+            options.binary_location = '/usr/bin/firefox'
+        elif os.path.exists('/usr/local/bin/firefox'):
+            options.binary_location = '/usr/local/bin/firefox'
+        else:
+            raise RuntimeError("Firefox binary not found in expected locations.")
+
+        # Run in headless mode
+        options.add_argument('--headless')
+        
+        return webdriver.Firefox(service=GeckoService(GeckoDriverManager().install()), options=options)
 
     elif browser.lower() in opera:
         return webdriver.Opera(OperaDriverManager().install())
@@ -33,7 +50,7 @@ def get_driver(browser):
         return webdriver.Ie(IEDriverManager().install())
 
     elif browser.lower() in edge:
-        return webdriver.Edge(executable_path=EdgeChromiumDriverManager().install())
+        return webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()))
 
     else:
         raise RuntimeError('Browser not found {}'.format(browser.lower()))
